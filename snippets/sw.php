@@ -17,7 +17,7 @@ $precache = json_encode(
 	$precache,
 	JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
 );
-$version = $options['version'] ?? 'site-' . hash('xxh3', json_encode($options));
+$version = $options['version'] ?? hash('xxh3', json_encode($options));
 $rules = json_encode(
 	$options['rules'],
 	JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
