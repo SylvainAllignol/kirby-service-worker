@@ -16,6 +16,7 @@ It is designed for site performance (faster repeat visits, reduced network usage
 - Rule-based caching by URL pattern
 - Optional precache list
 - Optional offline page fallback
+- Cached pages retrieval via `postMessage` (`GET_CACHED_PAGES`)
 - Built-in offline SVG fallback for images
 - Optional debug logs in the browser console (`option('debug')`)
 
@@ -108,6 +109,80 @@ return [
 It is strongly recommended to create a dedicated offline page (for example `/offline`) and set it as `offlineFallback`.
 
 When a navigation request fails because the user is offline, the service worker returns this page instead of an empty/error response. This gives users a clear message, keeps your UX consistent, and can provide useful fallback content such as key links, contact info, or retry actions.
+
+### Retrieving cached pages via message
+
+The service worker can return the list of cached navigation pages through `postMessage`.
+
+- Send `{ type: 'GET_CACHED_PAGES' }` to the active service worker.
+- Listen for `{ type: 'CACHED_PAGES', pages: [...] }` in the page, where `pages` is an array of URL strings.
+
+This is especially useful on an offline page to display quick links to already cached content.
+
+Example frontend script:
+
+```js
+(() => {
+  // URLs to pin at the top of the list
+  const PRIORITY = [
+    "/",
+    "/about",
+    "/blog",
+    "/contact"
+  ];
+
+  // Ask the active service worker for cached page URLs
+  navigator.serviceWorker.controller.postMessage({ type: "GET_CACHED_PAGES" });
+
+  // Receive messages from the service worker
+  navigator.serviceWorker.addEventListener("message", async (event) => {
+    if (event.data.type !== "CACHED_PAGES") return;
+
+    // Sort URLs for a better offline navigation list
+    const sortedUrls = [...event.data.pages].sort((a, b) => {
+
+      // Priority pages first, using PRIORITY order
+      const aPriority = PRIORITY.indexOf(a);
+      const bPriority = PRIORITY.indexOf(b);
+
+      if (aPriority !== -1 && bPriority !== -1) {
+        return aPriority - bPriority; // Keep PRIORITY order
+      }
+      if (aPriority !== -1) return -1;
+      if (bPriority !== -1) return 1;
+
+      // Parent paths before child paths
+      if (b.startsWith(a + "/")) return -1;
+      if (a.startsWith(b + "/")) return 1;
+
+      // Then alphabetical order
+      return a.localeCompare(b, "fr", { sensitivity: "base" });
+    });
+
+    const pages = await Promise.all(
+      sortedUrls.map(async (url) => {
+        // Fetch cached HTML and extract a few display fields
+        const res = await fetch(url);
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        return {
+          url,
+          title: doc.querySelector("h1")?.textContent?.trim(),
+          description: doc.querySelector('meta[name="description"]')?.content?.trim(),
+        };
+      }),
+    );
+
+    // Render links into <ul id="cached-pages"></ul>
+    const list = document.querySelector("#cached-pages");
+    list.innerHTML = pages
+      .map(
+        ({ url, title, description }) => `<li><a href="${url}"><strong>${title}</strong>${description ? `<br><small>${description}</small>` : ""}</a></li>`
+      )
+      .join("");
+  });
+})();
+```
 
 ## Caching strategies and default behavior
 

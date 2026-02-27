@@ -17,7 +17,7 @@ $precache = json_encode(
 	$precache,
 	JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
 );
-$version = $options['version'] ?? hash('xxh3', json_encode($options));
+$version = $options['version'] ?? hash('xxh3', json_encode($options) . json_encode($precache));
 $rules = json_encode(
 	$options['rules'],
 	JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
@@ -173,6 +173,36 @@ self.addEventListener('activate', event => {
 			self.clients.claim();
 		})
 	);
+});
+
+/* ---------------------------
+ * MESSAGE
+ --------------------------- */
+
+const messageHandlers = {
+	async GET_CACHED_PAGES(event) {
+		const pages = await getCachedHtmlPages();
+		postMessageResponse(event, { type: 'CACHED_PAGES', pages });
+	}
+};
+
+function postMessageResponse(event, payload) {
+	if (event.ports && event.ports[0]) {
+		event.ports[0].postMessage(payload);
+		return;
+	}
+
+	if (event.source && typeof event.source.postMessage === 'function') {
+		event.source.postMessage(payload);
+	}
+}
+
+self.addEventListener('message', event => {
+	const messageType = event.data && event.data.type;
+	const handler = messageType && messageHandlers[messageType];
+	if (!handler) return;
+
+	event.waitUntil(handler(event));
 });
 
 /* ---------------------------
@@ -356,5 +386,42 @@ function imageFallbackResponse() {
 	return new Response(OFFLINE_IMAGE, {
 		headers: { 'Content-Type': 'image/svg+xml' }
 	});
+}
+
+/* ---------------------------
+ * UTILITIES
+ --------------------------- */
+
+async function getCachedHtmlPages() {
+	const cacheNames = await caches.keys();
+	const versionSuffix = '-' + VERSION;
+	const versionedCacheNames = cacheNames.filter(name => name.endsWith(versionSuffix));
+	const orderedCaches = [
+		...versionedCacheNames.filter(name => !name.startsWith('core-')),
+		...versionedCacheNames.filter(name => name.startsWith('core-'))];
+
+	const pagesSet = new Set();
+
+	for (const cacheName of orderedCaches) {
+		const cache = await caches.open(cacheName);
+		const requests = await cache.keys();
+
+		for (const request of requests) {
+			const response = await cache.match(request);
+			if (!response) continue;
+
+			const contentType = response.headers.get('content-type') || '';
+			if (!contentType.includes('text/html')) continue;
+
+			const url = new URL(request.url);
+			const pagePath = url.pathname;
+			if (!pagePath) continue;
+			if (OFFLINE_FALLBACK && pagePath === OFFLINE_FALLBACK) continue;
+
+			pagesSet.add(pagePath);
+		}
+	}
+
+	return Array.from(pagesSet);
 }
 JS;
