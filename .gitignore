@@ -1,0 +1,21 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Composer
+/composer.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.code-workspace
+
+# Logs
+*.log
+
+# Sources
+.sources

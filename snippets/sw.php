@@ -219,7 +219,9 @@ self.addEventListener('fetch', event => {
 
 	// Ignore video and audio (range requests not supported)
 	if (request.destination === 'video' || request.destination === 'audio'){
-		event.respondWith(new Response('', { status: 503, statusText: 'Offline' }));
+		event.respondWith(
+			fetch(request).catch(() => new Response('', { status: 503, statusText: 'Offline' }))
+		);
 		return;
 	}
 
