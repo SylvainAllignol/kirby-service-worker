@@ -3,7 +3,7 @@
 	"description": "Kirby service worker caching plugin with configurable strategies, precache, offline fallback and Cache Stamp integration",
 	"type": "kirby-plugin",
 	"license": "MIT",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"homepage": "https://plugins.getkirby.com/sylvainallignol/service-worker",
 	"authors": [
 		{

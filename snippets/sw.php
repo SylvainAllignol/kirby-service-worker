@@ -34,7 +34,20 @@ $offlineImage = json_encode(
 	$options['offlineSVG'],
 	JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 );
-$debug = json_encode((bool)option('debug', false));
+$debugEnabled = (bool)option('debug', false);
+$debugFunction = $debugEnabled
+	? <<<JS
+/**
+ * Debug utility function
+ * 
+ * @param  {...any} args - the arguments to log
+ * @returns {void}
+ */
+function dbg(...args) {
+	console.log('%c[SW]', 'color:#0aa;font-weight:bold', ...args);
+}
+JS
+	: '';
 
 /**
  * If the default strategy is set to "destruct", the service worker will unregister itself and reload all clients when activated.
@@ -61,7 +74,7 @@ JS;
 	return;
 }
 
-echo
+$script =
 <<<JS
 const VERSION = '{$version}';
 const PRECACHE = {$precache};
@@ -70,18 +83,8 @@ const OFFLINE_FALLBACK = {$offlineFallback};
 const OFFLINE_IMAGE = {$offlineImage};
 const DEFAULT_STRATEGY = {$defaultStrategy};
 const PANEL_URL = '{$panel_url}';
-const DEBUG = {$debug};
 
-/**
- * Debug utility function, only logs if DEBUG is true
- * 
- * @param  {...any} args - the arguments to log
- * @returns {void}
- */
-function dbg(...args) {
-	if(!DEBUG) return;
-	console.log('%c[SW]', 'color:#0aa;font-weight:bold', ...args);
-}
+{$debugFunction}
 
 /**
  * Utility function to check if a URL is cacheable (not an admin or API route)
@@ -283,7 +286,9 @@ const strategies = {
 			const res = await fetch(request);
 			if (res.ok && !isInPrecache(request)) {
 				cache.put(request, res.clone())
-					.catch(err => dbg('cacheFirst', { status: 'put-error', url: request.url, err }));
+					.catch(err => {
+						dbg('cacheFirst', { status: 'put-error', url: request.url, err });
+					});
 			}
 			dbg('cacheFirst', { status: 'miss', url: request.url, status: res.status });
 			return res;
@@ -304,7 +309,9 @@ const strategies = {
 			const res = await fetch(request);
 			if (res.ok && !isInPrecache(request)) {
 				cache.put(request, res.clone())
-					.catch(err => dbg('networkFirst', { status: 'put-error', url: request.url, err }));
+					.catch(err => {
+						dbg('networkFirst', { status: 'put-error', url: request.url, err });
+					});
 			}
 			dbg('networkFirst', { status: 'network', url: request.url, status: res.status });
 			return res;
@@ -331,7 +338,9 @@ const strategies = {
 		const networkFetch = fetch(request)
 			.then(res => {
 				if (res.ok) cache.put(request, res.clone())
-					.catch(err => dbg('staleWhileRevalidate', { status: 'put-error', url: request.url, err }));
+					.catch(err => {
+						dbg('staleWhileRevalidate', { status: 'put-error', url: request.url, err });
+					});
 				dbg('staleWhileRevalidate', { status: 'revalidated', url: request.url, httpStatus: res.status });
 				return res;
 			})
@@ -425,3 +434,14 @@ async function getCachedHtmlPages() {
 	return Array.from(pagesSet);
 }
 JS;
+
+// Strip debug calls from generated SW source when Kirby debug mode is disabled.
+if (!$debugEnabled) {
+	$lines = explode("\n", $script);
+	$lines = array_filter($lines, static function (string $line): bool {
+		return !str_contains($line, 'dbg(');
+	});
+	$script = implode("\n", $lines);
+}
+
+echo $script;
