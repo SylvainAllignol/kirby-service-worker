@@ -95,7 +95,7 @@ const PANEL_URL = '{$panel_url}';
 function isCacheable(url) {
 	const urlObj = new URL(url);
 	const path = urlObj.pathname;
-	return !path.startsWith('/' + PANEL_URL) && !path.startsWith('/api');
+	return !path.startsWith('/' + PANEL_URL) && !path.startsWith('/api') && !path.startsWith('/media/panel') && !path.startsWith('/media/plugins');
 }
 
 /**
