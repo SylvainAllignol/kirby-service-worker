@@ -1,7 +1,7 @@
 <?php
 use Kirby\Cms\Response;
 
-Kirby::plugin('sylvainallignol/service-worker', [
+Kirby::plugin('sylvainallignol/kirby-service-worker', [
 	'options' => [
 		'enabled' => true,
 		'version' => null,
