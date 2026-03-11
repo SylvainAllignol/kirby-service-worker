@@ -30,7 +30,7 @@ Kirby::plugin('sylvainallignol/kirby-service-worker', [
 			'method'  => 'GET',
 			'action'  => function () {
 
-				$config = option('sylvainallignol.service-worker');
+				$config = option('sylvainallignol.kirby-service-worker');
 
 				if (!$config['enabled']) {
 					return false;

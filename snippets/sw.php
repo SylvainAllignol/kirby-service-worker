@@ -1,7 +1,7 @@
 <?php
 $panel_url = option('panel.slug', '/panel');
 
-$options = option('sylvainallignol.service-worker');
+$options = option('sylvainallignol.kirby-service-worker');
 
 $precache = array_map(function ($item) {
 	if (is_array($item)) {

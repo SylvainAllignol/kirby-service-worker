@@ -30,7 +30,7 @@ It is designed for site performance (faster repeat visits, reduced network usage
 ### Composer
 
 ```bash
-composer require sylvainallignol/service-worker
+composer require sylvainallignol/kirby-service-worker
 ```
 
 ### Manual (ZIP)
@@ -53,12 +53,12 @@ Or use your own JavaScript registration code.
 
 ## Configuration
 
-Use the `sylvainallignol.service-worker` option key:
+Use the `sylvainallignol.kirby-service-worker` option key:
 
 ```php
 <?php
 return [
-  'sylvainallignol.service-worker' => [
+  'sylvainallignol.kirby-service-worker' => [
     'enabled' => true,
     'version' => null,
     'registerType' => 'external',
